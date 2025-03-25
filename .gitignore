@@ -1,3 +1,4 @@
-c/entry.c
-c/RansomwareEntryPoint_14000afe0.c
+**/entry.c
+**/RansomwareEntryPoint_14000afe0.c
 HanksBackup/
+#HanksBackup_decrypted/

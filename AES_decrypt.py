@@ -6,7 +6,7 @@ from Crypto.Cipher import AES
 Change the following line to YOUR directory of the files to be decrypted
 DO NOT add a '/' to the end of your directory
 '''
-FILE_DIRECTORY = "/mnt/d/Cyber-Security/LM Forensics, Malware, and Penetration Testing/assignment3/HanksBackup"
+FILE_DIRECTORY = "HanksBackup"
 
 KEY = "8d02e65e508308dd743f0dd4d31e484d"  # AES-128 key
 

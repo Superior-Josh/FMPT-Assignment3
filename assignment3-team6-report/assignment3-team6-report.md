@@ -42,13 +42,19 @@ BOOL ReadFile(
 
 
 
-<img src="D:\Cyber-Security\LM Forensics, Malware, and Penetration Testing\assignment3\assignment3-team6-report\img\Call Trees.png" alt="Call Trees" style="zoom:50%;" />
+<img src="img\Call Trees.png" alt="Call Trees" style="zoom:50%;" />
 
-## 函数分析
+## Appendix
 
-### AES_Encrypt_140007080
+### 恶意软件样本相关数据
 
-### EncryptAndRenameFiles_140007590
+<img src="img\key.png" alt="key" style="zoom:67%;" />
+
+<img src="img\IV.png" alt="IV" style="zoom:67%;" />
+
+#### AES_Encrypt_140007080
+
+#### EncryptAndRenameFiles_140007590
 
 ```c++
     do
@@ -89,7 +95,7 @@ BOOL ReadFile(
 下面是对代码逻辑的详细分析，说明了AES加密针对哪些文件：
 
 1. **遍历文件列表**
-    代码通过调用 Windows API 函数 `FindFirstFileW` 和 `FindNextFileW` 遍历指定目录下的所有文件。
+   代码通过调用 Windows API 函数 `FindFirstFileW` 和 `FindNextFileW` 遍历指定目录下的所有文件。
 
    ```c
    if ((local_10e8.dwFileAttributes & 0x10) == 0) {
@@ -101,7 +107,7 @@ BOOL ReadFile(
    只有当文件的属性不包含目录标记（即 `dwFileAttributes & 0x10 == 0`）时，才认为是普通文件，从而进入后续处理流程。
 
 2. **排除已经加密的文件**
-    在处理每个文件时，代码先调用 `thunk_FUN_14000c700`，将文件名的前6个字符复制到 `local_e98` 中，然后与字符串 `"~en"` 进行比较：
+   在处理每个文件时，代码先调用 `thunk_FUN_14000c700`，将文件名的前6个字符复制到 `local_e98` 中，然后与字符串 `"~en"` 进行比较：
 
    ```c
    iVar2 = wcscmp(local_e98, L"~en");
@@ -113,7 +119,7 @@ BOOL ReadFile(
    如果文件名的前6个字符为 `"~en"`，则认为该文件已经被处理过（或作为特殊标识），不再对其进行加密。
 
 3. **排除自身文件**
-    通过调用 `GetModuleFileNameW` 得到当前程序（恶意软件）的完整路径，并使用 `PathFindFileNameW` 提取出文件名后，代码将当前正在处理的文件名与之进行比较：
+   通过调用 `GetModuleFileNameW` 得到当前程序（恶意软件）的完整路径，并使用 `PathFindFileNameW` 提取出文件名后，代码将当前正在处理的文件名与之进行比较：
 
    ```c
    _Str2 = PathFindFileNameW(local_858);
@@ -126,7 +132,7 @@ BOOL ReadFile(
    如果发现文件名与当前程序自身相同，则不会对其进行加密，从而避免加密恶意软件自身。
 
 4. **执行AES加密**
-    如果满足上述条件（文件不是目录、文件名不以 `"~en"` 开头且不是恶意软件自身），则构造目标输出路径，并调用 `AES_Encrypt_140007080` 对文件进行AES加密。加密完成后，原始文件会通过 `DeleteFileW` 被删除。
+   如果满足上述条件（文件不是目录、文件名不以 `"~en"` 开头且不是恶意软件自身），则构造目标输出路径，并调用 `AES_Encrypt_140007080` 对文件进行AES加密。加密完成后，原始文件会通过 `DeleteFileW` 被删除。
 
    ```c
    AES_Encrypt_140007080(input_addr, output_addr);
@@ -145,9 +151,7 @@ BOOL ReadFile(
 
 这一逻辑保证了加密操作仅作用于用户的数据文件，而不会干扰恶意软件自身或已经加密的文件。
 
-
-
-### RansomwareProcessor_140008240
+#### RansomwareProcessor_140008240
 
 ```c++
   WCHAR dir [264];
@@ -159,25 +163,19 @@ BOOL ReadFile(
 
 
 
-## Appendix
+### 加密目标相关数据
 
-**恶意软件样本相关数据**
-
-- 反汇编/反编译代码的关键片段（如加密算法实现、密钥处理逻辑）
-- 发现的配置数据（如硬编码密钥、加密路径、C2服务器地址）
-- 重要的寄存器/内存地址信息（如存放密钥的位置）
-
-**加密目标相关数据**
-
-- 恶意软件加密的示例文件（Hank 备份中的加密文件示例，最好是小文件）
-- 加密前后文件的对比（如相同文件在加密前后的结构变化）
 - 如果找到解密密钥，解密后的示例文件
 
-**分析过程中的日志或工具输出**
+### 工具输出
 
-- 逆向工程工具的分析结果（如 Ghidra 反编译代码的截图、Radare2 分析的寄存器值）
-- 调试工具（如 x64dbg、WinDbg）的关键日志
-- 用于解密的 Python/C 程序代码及运行结果
+
+
+<img src="img\output.png" alt="output" style="zoom: 67%;" />
+
+
+
+<img src="img\decrypted_exapmle.png" alt="decrypted_exapmle" style="zoom: 33%;" />
 
 
 
