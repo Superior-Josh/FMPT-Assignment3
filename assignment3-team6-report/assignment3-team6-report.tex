@@ -38,25 +38,14 @@
 \begin{document}
 
 \title{Assignment3 Team6 Report}
-\author{Haohan Fu, Jiayang Xu, Xibin Yu, Xi Wang, Zhengyang Cheng and Haoyu Ju}
+\author{Jiayang Xu, Zhengyang Cheng, Haohan Fu, Xibin Yu, Xi Wang and Haoyu Ju}
 \date{26, March, 2025}
 \maketitle
-
-您的目标是：
-
-1. 使用逆向工程工具分析恶意软件的代码，找出它在做什么。
-2. 确定恶意软件的目标文件/目录。
-3. 恢复恶意软件用来锁定目标文件/目录的密钥/密码。
-4. 汉克备份了最重要的文件，但这些文件已经被勒索软件加密。使用恢复的密钥/密码，编程一个能够解密汉克文件的工具。
-
-我们只要求简明扼要地提供必要的信息。需要考虑的重要方面：结构、适当的详细程度、清晰度、可复制性、完整性。
 
 \section{Analyze the malware's code}
 \subsection{Start}
 We used Ghidra to analyze the malware code. We found it difficult to find the code that implements the encryption function directly from the entry point, so we started at defined strings in the program. Then we found the AES encryption function AES\_Encrypt\_140007080, whose function call tree is shown in Figure \ref{Call Trees}:
 
-\subsection{The AES encryption function}
-\textbf{AES\_Encrypt\_140007080} is the AES encryption function.
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.6\textwidth]{img/Call Trees.png}
@@ -64,7 +53,91 @@ We used Ghidra to analyze the malware code. We found it difficult to find the co
     \label{Call Trees}
 \end{figure}
 
+\subsection{The AES encryption function}
+\textbf{AES\_Encrypt\_140007080} is the AES encryption function.
 
+\begin{lstlisting}[language=c++, caption=AES\_Encrypt\_140007080]
+    /* Open plaintext file */
+    local_f8 = CreateFileW(input_path,1,1,(LPSECURITY_ATTRIBUTES)0x0,3,0x80,
+                           (HANDLE)0x0);
+    if (local_f8 == (HANDLE)0xffffffffffffffff) {
+      DVar3 = GetLastError();
+      Error_140007510(L"Error opening plaintext file!\n",DVar3);
+    }
+    else {
+      printf((char *)L"Successfully opened plaintext file, %s. \n",input_path);
+                      /* Create encrypted file */
+      hFile = CreateFileW(output_path,2,1,(LPSECURITY_ATTRIBUTES)0x0,4,0x80,
+                          (HANDLE)0x0);
+      if (hFile == (HANDLE)0xffffffffffffffff) {
+        DVar3 = GetLastError();
+        Error_140007510(L"Error opening destination file!\n",DVar3);
+      }
+      else {
+        printf((char *)L"Successfully created destination file, %s. \n",
+               output_path);
+        local_e8 = 0x3e0;
+        buffer = (undefined8 *)_malloc_base(0x3f0);
+        if (buffer == (undefined8 *)0x0) {
+          Error_140007510(L"Not enough memory to allocate file buffer. \n",
+                          0x8007000e);
+        }
+        else {
+          printf((char *)L"%i file buffer has been allocated. \n",0x3f0);
+          local_f0 = (uint *)0x0;
+          local_f0 = (uint *)_malloc_base(4);
+          bVar1 = false;
+          do {
+                      /* Write 16 bytes IV */
+            BVar2 = WriteFile(hFile,IV_140086010,0x10,lpByteNum,(LPOVERLAPPED)0x0)
+            ;
+            if (BVar2 == 0) {
+              DVar3 = GetLastError();
+              Error_140007510(L"Error writing padding size.\n",DVar3);
+              goto LAB_1400073da;
+            }
+            printf((char *)L"IV successfully added to file.\n");
+            BVar2 = ReadFile(local_f8,buffer,0x3f0,lpByteNum,(LPOVERLAPPED)0x0);
+            if (BVar2 == 0) {
+              DVar3 = GetLastError();
+              Error_140007510(L"Error reading plaintext!\n",DVar3);
+              goto LAB_1400073da;
+            }
+            if (lpByteNum[0] < 0x3f0) {
+              bVar1 = true;
+            }
+            *local_f0 = lpByteNum[0];
+                      /* Write Buffer Length */
+            BVar2 = WriteFile(hFile,local_f0,4,lpByteNum,(LPOVERLAPPED)0x0);
+            if (BVar2 == 0) {
+              DVar3 = GetLastError();
+              Error_140007510(L"Error writing padding size.\n",DVar3);
+              goto LAB_1400073da;
+            }
+            printf((char *)L"Length of file buffer successfully added to file.\n")
+            ;
+            printf((char *)L"Starting CBC encryption.\n");
+                      /* AES encrypt */
+            InitEncryption_140008790
+                      ((longlong)context_array,0x140086000,
+                       (undefined8 *)IV_140086010);
+            StartEncryption_140008450((longlong)context_array,buffer,0x3f0);
+            printf((char *)
+                   L"Successfully encrypted file buffer. Writing to destination fi le...\n"
+                  );
+                      /* Write encryted file */
+            BVar2 = WriteFile(hFile,buffer,0x3f0,lpByteNum,(LPOVERLAPPED)0x0);
+            if (BVar2 == 0) {
+              DVar3 = GetLastError();
+              Error_140007510(L"Error writing ciphertext.\n",DVar3);
+              goto LAB_1400073da;
+            }
+          } while (!bVar1);
+          thunk_FUN_14003d334(local_f0);
+        }
+      }
+    }
+\end{lstlisting}
 
 \textbf{AES-CBC-128}
 
@@ -129,8 +202,7 @@ void RansomwareProcessor_140008240(void)
 \section{Recover the AES key}
 As noted above, the memory address of the AES key is the second parameter of the InitEncryption\_140008790 function:
 \begin{lstlisting}[language=c++, caption=call of InitEncryption\_140008790]
-                                            /*Address of AES key*/
-InitEncryption_140008790((longlong)context_array,0x140086000,(undefined8 *)IV_140086010);
+InitEncryption_140008790((longlong)context_array,0x140086000,(undefined8 *)IV_140086010);                              /*Address of AES key*/
 \end{lstlisting}
 
 Then we took a screenshot of the key in Ghidra, as shown in Figure \ref{fig:key}.
@@ -181,7 +253,7 @@ def decrypt_file(input_path, output_path, key_hex):
             #...
 \end{lstlisting}
 
-To use this python script, please install pycryptodome firstly.
+To use this python script, please install pycryptodome.
 \begin{lstlisting}
 pip3 install pycryptodome
 \end{lstlisting}
@@ -205,7 +277,8 @@ We take plagiarism seriously. By submitting your solution, you agree that:
 
 \newpage
 \appendix
-\section{Ghidra screenshots}
+\section*{Appendix}
+% \section{Ghidra screenshots}
 % Screenshot of the key in Ghidra is shown in Figure \ref{fig:key}. The key is '8d02e65e508308dd743f0dd4d31e484d'.
 % \begin{figure}[htbp]
 %     \centering
@@ -214,13 +287,13 @@ We take plagiarism seriously. By submitting your solution, you agree that:
 %     \label{fig:key}
 % \end{figure}
 
-Screenshot of IV in Ghidra is shown in Figure \ref{fig:IV}. IV is '0a0b0c0d0e0fa0b0c0d0e0f0aabbccdd'.
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.8\textwidth]{img/IV.png}
-    \caption{IV in Ghidra}
-    \label{fig:IV}
-\end{figure}
+% Screenshot of IV in Ghidra is shown in Figure \ref{fig:IV}. IV is '0a0b0c0d0e0fa0b0c0d0e0f0aabbccdd'.
+% \begin{figure}[htbp]
+%     \centering
+%     \includegraphics[width=0.8\textwidth]{img/IV.png}
+%     \caption{IV in Ghidra}
+%     \label{fig:IV}
+% \end{figure}
 
 \section{C-style decompiled codes}
 All the C-style decompiled codes mentioned above can be found in the
@@ -254,6 +327,7 @@ ulonglong RansomwareEntryPoint_14000afe0(void)
 
 \end{enumerate}
 
+\newpage
 \section{Decrypted files}
 Decrypted files can be found at:
 
