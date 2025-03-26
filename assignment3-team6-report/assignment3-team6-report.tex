@@ -81,7 +81,7 @@ It calls some Win32 API functions to read, encrypt and write the target files. I
     uint lpByteNum [2];
     BVar2 = WriteFile(hFile,IV_140086010,0x10,lpByteNum,(LPOVERLAPPED)0x0)\end{lstlisting}
 
-  \item Read 1008 (0x3f0) bytes sequentially from the input file into the buffer, and write the actual number of bytes read to the output file. In general, the actual number of bytes read (i.e. the size of unencrypted block) is 1008 except for the last one, which may be less than 1008.
+  \item Read 1008 (0x3f0) bytes from the input file into the buffer, and write the actual number of bytes read (i.e. the size of unencrypted block) to the output file. In general, the actual number of bytes read is 1008 except for the last one, which may be less than 1008.
   \begin{lstlisting}[language=c++]
     undefined8 *buffer;
     HANDLE local_f8;
@@ -91,19 +91,19 @@ It calls some Win32 API functions to read, encrypt and write the target files. I
     *local_f0 = lpByteNum[0];
     BVar2 = WriteFile(hFile,local_f0,4,lpByteNum,(LPOVERLAPPED)0x0);\end{lstlisting}
 
-  \item Encrypt the buffer with the IV and the key by calling \textbf{StartEncryption\_140008450()}. \\'0x140086000' is the memory address of the 16-byte key.
+  \item Encrypt the buffer with the IV and the key by calling \textbf{StartEncryption\_140008450()}.
   \begin{lstlisting}[language=c++]
     undefined keyScheduleWithIV  [192];             /* Address of the key*/
     InitEncryption_140008790((longlong)keyScheduleWithIV,0x140086000,(undefined8 *)IV_140086010);
     StartEncryption_140008450((longlong)keyScheduleWithIV,buffer,0x3f0);\end{lstlisting}
 
-    Then we took a screenshot of the key in Ghidra, as shown in Figure \ref{fig:key}.
+'0x140086000' is the memory address of the 16-byte key. Then we took a screenshot of the key in Ghidra, as shown in Figure \ref{fig:key}.
 
 The key is '\textbf{8d02e65e508308dd743f0dd4d31e484d}'.
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.6\textwidth]{img/key.png}
-    \caption{the AES key in Ghidra}
+    \caption{the key in Ghidra}
     \label{fig:key}
 \end{figure}
 
