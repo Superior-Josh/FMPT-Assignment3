@@ -12,7 +12,7 @@ void AES_Encrypt_140007080(LPCWSTR input_path,LPCWSTR output_path)
   HANDLE local_f8;
   uint *local_f0;
   undefined4 local_e8;
-  undefined context_array [192];
+  undefined keyScheduleWithIV [192];
   ulonglong local_18;
   
   local_18 = DAT_140086038 ^ (ulonglong)auStackY_158;
@@ -82,9 +82,9 @@ void AES_Encrypt_140007080(LPCWSTR input_path,LPCWSTR output_path)
           printf((char *)L"Starting CBC encryption.\n");
                     /* AES encrypt */
           InitEncryption_140008790
-                    ((longlong)context_array,0x140086000,
+                    ((longlong)keyScheduleWithIV,0x140086000,
                      (undefined8 *)IV_140086010);
-          StartEncryption_140008450((longlong)context_array,buffer,0x3f0);
+          StartEncryption_140008450((longlong)keyScheduleWithIV,buffer,0x3f0);
           printf((char *)
                  L"Successfully encrypted file buffer. Writing to destination fi le...\n"
                 );

