@@ -40,14 +40,14 @@
 
 \title{\textbf{Assignment3 Team6 Report}}
 \author{Jiayang Xu, Zhengyang Cheng, Haohan Fu, Xibin Yu, Xi Wang and Haoyu Ju}
-\date{26, March, 2025}
+\date{27, March, 2025}
 \maketitle
 
 \section{Analyze the malware's code}
-\subsection{Start}
 We used Ghidra to analyze the malware code. All C-style decompiled codes mentioned below can be found in Appendix \ref{C-style decompiled codes}. 
 
-We found it difficult to find the code that implements the encryption directly from the entry point, so we started to search defined strings in the program. Then we found the AES encryption function \textbf{AES\_Encrypt\_140007080()}, whose function call tree is shown in \\Figure \ref{Call Trees}. For ease of analysis, we have changed some names in the code and added comments to important parts. 
+\subsection{Start}
+We found it difficult to find the code that implements the encryption directly from the entry point, so we started to search defined strings in the program. Then we found the AES encryption function \textbf{AES\_Encrypt\_140007080()}, whose function call tree ends at the entry point, as shown in \\Figure \ref{Call Trees}. For ease of analysis, we have changed some names in the code and added comments to important parts. 
 
 \begin{figure}[htbp]
     \centering
@@ -65,7 +65,7 @@ We analyzed its implementation. The function has two parameters: the path to rea
 void AES_Encrypt_140007080(LPCWSTR input_path,LPCWSTR output_path)
 \end{lstlisting}
 
-It calls some Win32 API functions to read, encrypt and write the target files. It loops through the following steps until all the bytes of the file have been read.
+It calls some functions of Win32 APIs to read, encrypt and write files. It loops through the following steps until all the bytes of the file have been read.
 
 \begin{itemize}
   \item Open the input file and create the output file by calling \textbf{CreateFileW()}.
@@ -75,13 +75,13 @@ It calls some Win32 API functions to read, encrypt and write the target files. I
     local_f8 = CreateFileW(input_path,1,1,(LPSECURITY_ATTRIBUTES)0x0,3,0x80,(HANDLE)0x0);
     hFile = CreateFileW(output_path,2,1,(LPSECURITY_ATTRIBUTES)0x0,4,0x80(HANDLE)0x0);\end{lstlisting}
   
-  \item Write 16-byte IV to the output file. 'IV\_140086010'is a pointer to the memory address of the IV.
+  \item Write 16-byte IV to the output file. 'IV\_140086010' is a pointer to the memory address of the IV.
   \begin{lstlisting}[language=c++]
     BOOL BVar2;
     uint lpByteNum [2];
     BVar2 = WriteFile(hFile,IV_140086010,0x10,lpByteNum,(LPOVERLAPPED)0x0)\end{lstlisting}
 
-  \item Read 1008 (0x3f0) bytes from the input file into the buffer, and write the actual number of bytes read (i.e. the size of unencrypted block) to the output file. In general, the actual number of bytes read is 1008 except for the last one, which may be less than 1008.
+  \item Read 1008 (0x3f0) bytes from the input file into the buffer, and write the actual number of bytes read (i.e. the size of unencrypted block) to the output file. In general, the actual number of bytes read is 1008 except for the last one, which can be less than 1008.
   \begin{lstlisting}[language=c++]
     undefined8 *buffer;
     HANDLE local_f8;
@@ -149,18 +149,20 @@ void StartEncryption_140008450(longlong keyScheduleWithIV,undefined8 *buffer,uin
 }
 \end{lstlisting}
 
-To Summarise, we found that the ransomware uses \textbf{AES-CBC-128-NoPadding} encryption algorithm to encrypt files.
+As a result, we found that the ransomware uses \textbf{AES-CBC-128-NoPadding} encryption algorithm to encrypt files.
 
-Note that the decrypted file is not the original file. This is because when encrypting a file, the last encrypted buffer has residual data that has not been overwritten. Therefore, it's necessary to remove the residual data of the decrypted file when decrypting.
+Note that the last decrypted block is not the unencrypted block. This is because when encrypting a file, the last encrypted buffer has residual data that has not been overwritten. Therefore, it's necessary to remove the residual data of the last decrypted block when decrypting.
 
-\section{Determine what files/directories are targeted}
-\subsection{Determine what files are targeted}
-The function \textbf{EncryptAndRenameFiles\_140007590()}, which calls \textbf{AES\_Encrypt\_\\140007080()}, allows us to identify which files are targeted by ransomware. This function needs to be passed into a directory path pointer.
+\section{Identify what files and directories are targeted}
+Analyzing the following two functions, we identified the files and directories targeted by the ransomware.
+
+\subsection{Identify what files are targeted}
+The function \textbf{EncryptAndRenameFiles\_140007590()}, which calls \textbf{AES\_Encrypt\_\\140007080()}, allows us to identify which files are targeted by the ransomware. This function needs to be passed into a directory path pointer.
 \begin{lstlisting}[language=c++]
 void EncryptAndRenameFiles_140007590(short *dir)
 \end{lstlisting}
 
-Then the function defines a loop. In this loop, all the files in the 'dir' path will be found by calling \textbf{FindFirstFileW()}. 264 (0x104) is the maximum length of the path string: \lstinline|MAX_PATH = 0x104|.
+Then the function defines a loop, in which all the files in the 'dir' path will be found by calling \textbf{FindFirstFileW()}. 264 (0x104) is the maximum length of the path string: \lstinline|MAX_PATH = 0x104|.
 \begin{lstlisting}[language=c++]
   BOOL BVar3;
   do{ /*...*/
@@ -181,7 +183,7 @@ The loop executes the following code:
     if ((local_10e8.dwFileAttributes & 0x10) == 0){/*...*/}
 \end{lstlisting}
 
-  \item Compare the first three characters (6 bytes) of the filename with the string '~en', and then exclude the file if they are same.
+  \item Compare the first three characters (6 bytes) of the filename with the string '\textasciitilde en', and then exclude the file if they are same.
   \begin{lstlisting}[language=c++]
     wchar_t local_e98[8];
     copy_14000c700((undefined8 *)local_e98, (undefined8 *)local_10e8.cFileName, 6);
@@ -198,7 +200,7 @@ The loop executes the following code:
     if (iVar2 != 0){/*...*/}
 \end{lstlisting}
 
-  \item Encrypt the original file by calling \textbf{AES\_Encrypt\_140007080()}. \\Prefix the filename of encrypted file with '~en' (e.g. 'sample.md' to '~ensample.md'). \\Delete the original file by calling \textbf{DeleteFileW()}.
+  \item Encrypt the original file by calling \textbf{AES\_Encrypt\_140007080()}. \\Prefix the filename of encrypted file with '\textasciitilde en' (e.g. 'sample.md' to '\textasciitilde ensample.md'). \\Delete the original file by calling \textbf{DeleteFileW()}.
   \begin{lstlisting}[language=c++]
     CopyWPath_140007bc0(local_648, 0x104, dir);
     output_addr = local_648;
@@ -209,16 +211,16 @@ The loop executes the following code:
 \end{lstlisting}
 \end{itemize}
 
-After the above loop is completed, the second loop renames all the encrypted file to the original filenames by calling the \textbf{MoveFileW()} function (e.g. '~ensample.md' to 'sample.md').
+After the above loop is completed, the second loop renames all the encrypted file to the original filenames by calling the \textbf{MoveFileW()} function (e.g. '\textasciitilde ensample.md' to 'sample.md').
   \begin{lstlisting}[language=c++]
     MoveFileW(local_10f0, local_10f8);
 \end{lstlisting}
 
-In summary, for a given directory 'dir', the ransomware does \textbf{NOT} target: subdirectories and files in them, encrypted files and the ransomware itself. However, there is one exception. If a file's original filename is prefixed with '~en', it will not be encrypted, but the file will lose its prefix '~en' after the ransomware runs.
+In summary, for a given directory 'dir', the ransomware does \textbf{NOT} target: subdirectories and files in them, encrypted files and the ransomware itself. However, there is one exception. If a file's original filename is prefixed with '\textasciitilde en', it will not be encrypted, but the file will lose its prefix '\textasciitilde en' after the ransomware runs.
 
 But what is `the given directory`? Let's next locate it.
 
-\subsection{Determine what directory is targeted}
+\subsection{Identify what directory is targeted}
 The function \textbf{RansomwareProcessor\_140008240()} get the current directory by calling the function \textbf{GetCurrentDirectoryW()}, and passes it as a parameter to \textbf{EncryptAndRenameFiles\_140007590()}. Thus, the ransomware only targets the current directory.
 \begin{lstlisting}[language=c++, caption=Part of RansomwareProcessor\_140008240]
 void RansomwareProcessor_140008240(void)
@@ -233,7 +235,7 @@ void RansomwareProcessor_140008240(void)
 }
 \end{lstlisting}
 
-In conclusion, the ransomware targets: \textbf{all the files (not the subdirectories and files in them) in the current directory, except the ransomware itself and all files prefixed with '~en'.}
+In conclusion, the ransomware only runs on Windows OS (because it uses Win32 APIs), and targets: \textbf{all the files (not the subdirectories and their files) in the current directory, except the ransomware itself and all files prefixed with '\textasciitilde en'.}
 
 \section{Decrypt Hank's files.}
 The tool to decrypt Hank's files is \textbf{'assinment3-team6-data/AES\_decrypt.py'}.
