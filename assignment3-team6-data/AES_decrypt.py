@@ -1,4 +1,5 @@
 import os
+import sys
 import struct
 from Crypto.Cipher import AES
 
@@ -6,7 +7,7 @@ from Crypto.Cipher import AES
 Change the following line to YOUR directory of the files to be decrypted
 DO NOT add a '/' to the end of your directory
 '''
-FILE_DIRECTORY = "HanksBackup"
+FILE_DIRECTORY = "test"
 
 KEY = "8d02e65e508308dd743f0dd4d31e484d"  # AES-128 key
 
@@ -49,6 +50,10 @@ def main():
     input_dir = FILE_DIRECTORY 
     output_dir = f"{os.path.splitext(input_dir)[0]}_decrypted"
 
+    if not os.path.isdir(input_dir):
+        print(f"Error: Directory '{input_dir}' does not exist.", file=sys.stderr)
+        sys.exit(1)
+        
     os.makedirs(output_dir, exist_ok=True)
 
     for root, _, files in os.walk(input_dir):
